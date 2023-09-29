@@ -1,13 +1,35 @@
 import "dotenv/config";
 import express from "express";
-import UserService from "./services/user.service.js";
+
+import multer from "multer";
+import crypto from 'crypto';
+import { extname } from "path";
+
 import authMiddleware from "./middlewares/auth.middlewares.js";
+import UserService from "./services/user.service.js";
+import ProductService from "./services/product.service.js";
 
 const app = express();
-const port = 3000;
+const port = 3333;
+
+/************* PRODUCTS image ******************************** */
+const storageConfig = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const newFilename = crypto.randomBytes(32).toString('hex');
+    const filenameExtension = extname(file.originalname);
+    cb(null, `${newFilename}${filenameExtension}`);
+  }
+});
+const uploadMiddleware = multer({ storage: storageConfig });
+/********************************************* */
 
 app.use(express.json());
 //app.use(authMiddleware);
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 app.get("/", (req, res) => {
   res.send("ImagineShop API");
@@ -25,6 +47,35 @@ app.post("/login", async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 });
+
+/************* PRODUCTS ******************************** */
+
+// C - CREAT
+
+app.post("/products", uploadMiddleware.single('image'), async (req, res) => {
+  const { name, description, price, summary, stock } = req.body;
+  const productService = new ProductService();
+  const product = {
+    name,
+    description,
+    price,
+    summary,
+    stock,
+    fileName: req.file.filename
+  };
+  await productService.add(product);
+  return res.status(201).json({ message: "sucess" });
+});
+
+// R - READ
+
+app.get("/products", async (req, res) => {
+  const productService = new ProductService();
+  const products = await productService.findAll();
+  return res.status(200).json(products);
+});
+
+/******************************************************************* */
 
 // C - CREAT
 
@@ -81,8 +132,6 @@ app.delete("/users/:id", authMiddleware, async (req, res) => {
 app.listen(port, () => {
   console.log(`Server runnting at http://localhost:${port}`);
 });
-
-
 
 // C - CREAT
 /*
