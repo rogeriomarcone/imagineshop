@@ -16,4 +16,16 @@ export default class ProductService {
     return await ProductModel.findById(id);
   }
 
+  async sell(productIds) {
+    for (const productId of productIds) {
+      const product = await this.findById(productId);
+      if(product){
+        product.stock = product.stock - 1;
+        await ProductModel.updateOne({ _id: product.id}, product);
+      }
+      console.log(product);
+    }
+    return 'sucesso';
+  }
+
 }

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cors from 'cors';
 
 import multer from "multer";
 import crypto from 'crypto';
@@ -26,6 +27,7 @@ const storageConfig = multer.diskStorage({
 const uploadMiddleware = multer({ storage: storageConfig });
 /********************************************* */
 
+app.use(cors({origin: '*'}));
 app.use(express.json());
 //app.use(authMiddleware);
 app.use(express.urlencoded({ extended: true }));
@@ -52,7 +54,7 @@ app.post("/login", async (req, res) => {
 
 // C - CREAT
 
-app.post("/products", uploadMiddleware.single('image'), async (req, res) => {
+app.post("/products", authMiddleware, uploadMiddleware.single('image'), async (req, res) => {
   const { name, description, price, summary, stock } = req.body;
   const productService = new ProductService();
   const product = {
@@ -67,6 +69,15 @@ app.post("/products", uploadMiddleware.single('image'), async (req, res) => {
   return res.status(201).json({ message: "sucess" });
 });
 
+// VENDAS
+app.post("/products/sell", authMiddleware, async (req, res) => {
+  const { productIds } = req.body;
+  const productService = new ProductService();
+  await productService.sell(productIds);
+  return res.status(201).json({ message: "sucess" });
+});
+
+
 // R - READ
 
 app.get("/products", async (req, res) => {
@@ -75,6 +86,14 @@ app.get("/products", async (req, res) => {
   return res.status(200).json(products);
 });
 
+// R - READ ID
+app.get("/products/:id", async (req, res) => {
+  const id = req.params.id;
+  const productService = new ProductService();
+  const product = await productService.findById(id);
+  //res.setHeader('Access-Control-Allow-Origin', 'http://localhost:3000');
+  return res.status(200).json(product);
+});
 /******************************************************************* */
 
 // C - CREAT
